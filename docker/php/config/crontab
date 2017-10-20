@@ -1,0 +1,5 @@
+#m  h   d   m   d   user      command
+*   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php index transactionsHandler         >/dev/null 2>&1 # Handle new txs
+*   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php index acceptPhysResidentForms         >/dev/null 2>&1 # Handle forms of phys resident clients
+
+# An empty line is required at the end of this file for a valid cron file.

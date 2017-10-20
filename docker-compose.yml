@@ -1,0 +1,56 @@
+version: '2'
+services:
+
+  nginx:
+    restart: always
+    container_name: coinlancer-api-nginx
+    build: docker/nginx
+    ports:
+      - "8099:80"
+    volumes:
+      - ./src:/src
+      - ./logs/nginx/:/logs
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d/
+    links:
+      - php
+
+  php:
+    restart: always
+    container_name: coinlancer-api-php
+    build: docker/php
+    volumes:
+      - ./src:/src
+      - ./logs:/logs
+      - ./files:/files
+    links:
+      - memcached
+      - mysql
+    env_file:
+      - ./.env
+    cap_add:
+      - ALL
+
+  mysql:
+    restart: always
+    container_name: coinlancer-api-mysql
+    ports:
+      - "3306:3306"
+    build: docker/mysql
+    volumes:
+      - storage:/var/lib/mysql/
+      - ./logs/mysql/:/logs
+    environment:
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "123"
+
+  memcached:
+    restart: always
+    container_name: coinlancer-api-memcached
+    image: memcached:latest
+    volumes:
+      - ./logs/memcached/:/logs
+
+volumes:
+  storage:

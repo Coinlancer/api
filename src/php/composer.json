@@ -1,0 +1,11 @@
+{
+  "require": {
+    "monolog/monolog": "^1.21",
+    "phpmailer/phpmailer": "^5.2",
+    "firebase/php-jwt": "dev-master",
+    "wedancedalot/pixie": "dev-master"
+  },
+  "repositories":[
+    {"type": "vcs", "url": "https://github.com/wedancedalot/pixie"}
+  ]
+}
