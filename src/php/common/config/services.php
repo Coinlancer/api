@@ -117,3 +117,7 @@ $di->setShared('querybuilder', function () use ($config) {
 
     return $conn->getQueryBuilder();
 });
+
+$di->setShared('storage', function () {
+    return new Storage();
+});

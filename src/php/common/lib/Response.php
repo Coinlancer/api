@@ -13,7 +13,7 @@ class Response extends \Phalcon\Http\Response
     const ERR_BAD_SIGN = 'ERR_BAD_SIGN';
     const ERR_NOT_ALLOWED = 'ERR_NOT_ALLOWED';
 
-    public function error($err_code, $http_code = 400, $msg = '')
+    public function error($err_code, $msg = '', $http_code = 400)
     {
         if (!defined('self::' . $err_code)) {
             throw new \Exception($err_code . ' - Unknown error code');

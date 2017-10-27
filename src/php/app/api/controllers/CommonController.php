@@ -17,15 +17,52 @@ class CommonController extends ControllerBase
 
     public function getCategoriesAction()
     {
-        $categories = Categories::find();
+        $categories = $this->querybuilder->table('categories')->select('*')->get();
 
-        return $this->response->json(['categories' => $categories]);
+        $subcategories = $this->querybuilder
+            ->table('subcategories')
+            ->select(['subcategories.*', $this->querybuilder->raw('count(projects.prj_id) as projects_count')])
+            ->leftJoin('projects', 'subcategories.sct_id', '=', 'projects.sct_id')
+            ->groupBy('subcategories.sct_id')
+            ->get();
+
+        return $this->response->json(['categories' => $categories, 'subcategories' => $subcategories]);
     }
 
-    public function getChildCategoriesAction()
+    public function getSubCategoriesAction()
     {
-        $subcategories = Subcategories::find();
+        $subcategories = $this->querybuilder
+            ->table('subcategories')
+            ->select(['subcategories.*', $this->querybuilder->raw('count(projects.prj_id) as projects_count')])
+            ->leftJoin('projects', 'subcategories.sct_id', '=', 'projects.sct_id')
+            ->groupBy('subcategories.sct_id')
+            ->get();
 
-        return $this->response->json(['subcategories' => $subcategories]);
+        return $this->response->json($subcategories);
+    }
+
+    public function getFreelancersAction()
+    {
+        $filters = [
+            'limit' => +$this->request->getQuery('limit'),
+            'offset' => +$this->request->getQuery('offset')
+        ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
+
+        $freelancers = $this->querybuilder
+            ->table('freelancers')
+            ->select('*')
+            ->join('accounts', 'accounts.acc_id', '=', 'freelancers.acc_id')
+            ->limit($filters['limit'])
+            ->offset($filters['offset'])
+            ->get();
+
+        foreach ($freelancers as $key => $freelancer) {
+            $freelancers[$key] = \App\Models\Accounts::sanitise($freelancer);
+        }
+
+        return $this->response->json($freelancers);
     }
 }

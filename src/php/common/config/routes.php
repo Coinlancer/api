@@ -1,11 +1,6 @@
 <?php
 
-//$router->addGet('/get-categories-projects-number', [
-//    "controller" => "index",
-//    "action"     => "getCategoriesProjectsNumber"
-//]);
-
-// login
+// authentication
 $router->addPost('/login', [
     'controller' => 'Auth',
     'action'     => 'login',
@@ -18,19 +13,52 @@ $router->addPost('/verify', [
     'controller' => 'Auth',
     'action'     => 'verify',
 ]);
-
 // account
-//$router->addPost('/account/{id}', [
-//    'controller' => 'Account',
-//    'action'     => 'get_account',
+$router->addPost('/account/role/activate', [
+    'controller' => 'Accounts',
+    'action'     => 'activateRole',
+]);
+$router->addGet('/account', [
+    'controller' => 'Accounts',
+    'action'     => 'show',
+]);
+$router->addGet('/account/{id}', [
+    'controller' => 'Accounts',
+    'action'     => 'show',
+]);
+//$router->addGet('/reviews/account/{id}', [
+//    'controller' => 'Accounts',
+//    'action'     => 'showReviews',
 //]);
-//$router->addPost('/account/update', [
-//    'controller' => 'Account',
-//    'action'     => 'update',
+//$router->addPost('/reviews/account/{id}', [
+//    'controller' => 'Accounts',
+//    'action'     => 'saveReview',
 //]);
 
+// common functions
+$router->addGet('/skills', [
+    'controller' => 'Common',
+    'action'     => 'getSkills',
+]);
+$router->addGet('/categories', [
+    'controller' => 'Common',
+    'action'     => 'getCategories',
+]);
+$router->addGet('/subcategories', [
+    'controller' => 'Common',
+    'action'     => 'getSubCategories',
+]);
+$router->addGet('/freelancers', [
+    'controller' => 'Common',
+    'action'     => 'getFreelancers',
+]);
+//404 not found
+$router->notFound([
+    "controller" => "index",
+    "action"     => "notFound"
+]);
 
-// project
+// projects
 $router->addGet('/projects', [
     'controller' => 'projects',
     'action'     => 'index',
@@ -43,33 +71,68 @@ $router->addGet('/projects/account/{id}', [
     'controller' => 'projects',
     'action'     => 'getByAccount',
 ]);
-$router->addPost('/projects/create', [
+$router->addPost('/projects', [
     'controller' => 'projects',
     'action'     => 'create',
 ]);
-
+$router->addPost('/projects/{id}', [ // check
+    'controller' => 'projects',
+    'action'     => 'update',
+]);
+// skills
+$router->addPost('/projects/{project_id}/skills', [
+    'controller' => 'projects',
+    'action'     => 'addSkill',
+]);
+$router->addPost('/projects/{project_id}/skills/delete', [
+    'controller' => 'projects',
+    'action'     => 'deleteSkill',
+]);
+// steps
+$router->addGet('/projects/{project_id}/steps', [
+    'controller' => 'steps',
+    'action'     => 'index',
+]);
+$router->addPost('/projects/{project_id}/steps', [
+    'controller' => 'steps',
+    'action'     => 'create',
+]);
+$router->addPost('/projects/steps/{id}', [
+    'controller' => 'steps',
+    'action'     => 'update',
+]);
+$router->addPost('/projects/steps/{id}/delete', [
+    'controller' => 'steps',
+    'action'     => 'delete',
+]);
+// attachments
+$router->addPost('/projects/{id}/attachments', [
+    'controller' => 'attachments',
+    'action'     => 'save',
+]);
+$router->addPost('/projects/attachments/{id}/delete', [
+    'controller' => 'attachments',
+    'action'     => 'delete',
+]);
 // test file upload
 $router->addPost('/projects/test', [
     'controller' => 'projects',
     'action'     => 'test',
 ]);
-
-
-// common
-$router->addGet('/skills', [
-    'controller' => 'Common',
-    'action'     => 'getSkills',
+// suggestions
+$router->addGet('/projects/{id}/suggestions', [
+    'controller' => 'suggestions',
+    'action'     => 'index',
 ]);
-$router->addGet('/categories', [
-    'controller' => 'Common',
-    'action'     => 'getCategories',
+$router->addPost('/projects/{id}/suggestions', [
+    'controller' => 'suggestions',
+    'action'     => 'create',
 ]);
-$router->addGet('/subcategories', [
-    'controller' => 'Common',
-    'action'     => 'getChildCategories',
+$router->addPost('/projects/suggestions/{id}/delete', [
+    'controller' => 'suggestions',
+    'action'     => 'delete',
 ]);
-//404 not found
-$router->notFound([
-    "controller" => "index",
-    "action"     => "notFound"
+$router->addPost('/projects/suggestions/{id}/confirm', [
+    'controller' => 'suggestions',
+    'action'     => 'confirm',
 ]);

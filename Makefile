@@ -18,6 +18,17 @@ state:
 	docker-compose ps
 
 build:
+	@if [ ! -f ./.env ]; then\
+  	read -p "Enter database username: " db_user; echo "DB_USER=$$db_user" >>./.env; \
+  	read -p "Enter database password: " db_pass; echo "DB_PASSWORD=$$db_pass" >>./.env; \
+  	read -p "Enter database name: " db_name; echo "DB_NAME=$$db_name" >>./.env; \
+  	read -p "Enter SMTP host:" smtp_host; echo "SMTP_HOST=$$smtp_host" >> ./.env; \
+  	read -p "Enter SMTP port:" smtp_port; echo "SMTP_PORT=$$smtp_port" >> ./.env; \
+  	read -p "Enter SMTP security:" smtp_security; echo "SMTP_SECURITY=$$smtp_security" >> ./.env; \
+  	read -p "Enter SMTP username:" smtp_user; echo "SMTP_USER=$$smtp_user" >> ./.env; \
+  	read -p "Enter SMTP password:" smtp_pass; echo "SMTP_PASS=$$smtp_pass" >> ./.env; \
+  	read -p "Debug mode [skip empty for disable or type anything]:" debug; echo "DEBUG=$$debug" >> ./.env; \
+	fi
 	docker-compose build
 	docker-compose up -d
 

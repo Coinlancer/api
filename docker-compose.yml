@@ -44,6 +44,7 @@ services:
       MYSQL_USER: "${DB_USER}"
       MYSQL_PASSWORD: "${DB_PASSWORD}"
       MYSQL_ROOT_PASSWORD: "123"
+      TZ: "Europe/Kiev"
 
   memcached:
     restart: always

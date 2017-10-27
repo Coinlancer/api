@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Lib\User;
 use App\Lib\Response;
+use App\Models\Projects;
 use \Firebase\JWT\JWT;
 
 class ControllerBase extends \Phalcon\Mvc\Controller

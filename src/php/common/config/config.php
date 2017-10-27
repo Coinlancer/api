@@ -27,4 +27,9 @@ return new \Phalcon\Config([
         'username' => getenv("SMTP_USER"),
         'password' => getenv("SMTP_PASS"),
     ],
+
+    'filters' => [
+        'limit' => 25,
+        'offset' => 0
+    ]
 ]);

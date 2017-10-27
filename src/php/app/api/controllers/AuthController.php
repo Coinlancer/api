@@ -28,8 +28,8 @@ class AuthController extends ControllerBase
         }
 
         $token = $this->createToken($account->acc_id);
-//        $logger = DI::getDefault()->getLogger();
-//        $logger->info($user_data['type']);
+
+        $account = Accounts::getPublicAccount($account->acc_id);
 
         return $this->response->json(['account' => $account, 'token' => $token]);
     }
@@ -66,11 +66,9 @@ class AuthController extends ControllerBase
             return $this->response->error(Response::ERR_NOT_FOUND);
         }
 
-//        if (!$account->acc_is_verified) {
-//            return $this->response->error(Response::ERR_NOT_ACTIVATED);
-//        }
-
         $token = $this->createToken($account->acc_id);
+
+        $account = Accounts::getPublicAccount($account->acc_id);
 
         return $this->response->json(['account' => $account, 'token' => $token]);
     }

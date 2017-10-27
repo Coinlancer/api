@@ -3,9 +3,6 @@
 namespace App\Models;
 
 use Phalcon\Mvc\Model;
-use App\Models\Clients;
-use App\Models\Freelancers;
-use Phalcon\Exception;
 
 class Accounts extends Model
 {
@@ -49,10 +46,9 @@ class Accounts extends Model
     protected static function makeVerificationKey($account)
     {
         $key = rand(10000000, 99999999);
-        $mailer = $account->getDi()->getShared('mailer');
-        $subject = 'Coinlancer verification key';
-        $body = 'Verification key is - ' . $key;
-
+//        $mailer = $account->getDi()->getShared('mailer');
+//        $subject = 'Coinlancer verification key';
+//        $body = 'Verification key is - ' . $key;
 //        $mailer->send($account->acc_email, $subject, $body);
 
         return $key;
@@ -72,42 +68,42 @@ class Accounts extends Model
         return false;
     }
 
-    //    public static function getAccount($account_id)
-//    {
-//        return self::findFirst($account_id);
-//    }
-//
-//    public static function getAccountByNumberAndCurrency($account_number, $currency)
-//    {
-//        return self::findFirst([
-//            "conditions" => "account_number = ?1 AND currency = ?2",
-//            "bind"       => [
-//                1 => $account_number,
-//                2 => $currency
-//            ]
-//        ]);
-//    }
-//
-//    public static function getCustomerAccounts($customer_id, $currency = null)
-//    {
-//        if (!empty($currency)) {
-//            $condition = [
-//                "conditions" => "customer_id = ?1 AND currency = ?2",
-//                "bind"       => [
-//                    1 => $customer_id,
-//                    2 => $currency
-//                ]
-//            ];
-//        } else {
-//            $condition = [
-//                "conditions" => "customer_id = ?1",
-//                "bind"       => [
-//                    1 => $customer_id
-//                ]
-//            ];
-//        }
-//
-//        return self::find($condition);
-//    }
+    public static function getPublicAccount($account_id)
+    {
+        $account = self::findFirst($account_id);
 
+        if (!$account) {
+            return false;
+        }
+
+        $account = $account->toArray();
+
+        unset($account['acc_password']);
+        unset($account['acc_verification_key']);
+
+        $account['cln_id'] = null;
+        $account['frl_id'] = null;
+
+        $client = Clients::findFirstByAccId($account['acc_id']);
+
+        if ($client) {
+            $account['cln_id'] = $client->cln_id;
+        }
+
+        $freelancer = Freelancers::findFirstByAccId($account['acc_id']);
+
+        if ($freelancer) {
+            $account['frl_id'] = $freelancer->frl_id;
+        }
+
+        return $account;
+    }
+
+    public static function sanitise($account)
+    {
+        unset($account->acc_password);
+        unset($account->acc_verification_key);
+
+        return $account;
+    }
 }

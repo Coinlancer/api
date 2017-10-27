@@ -8,11 +8,10 @@ class Projects extends ModelBase
 {
     public static function getExtended(array $filters = [])
     {
-        $filters = self::filterParams([
-            'offset' => 0,
-            'limit'  => 25,
-            'acc_id' => null,
-        ], $filters);
+        $config = Di::getDefault()->getConfig();
+
+        $filters['limit'] ?: $filters['limit'] = $config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $config->filters->offset;
 
         $qb = Di::getDefault()->getQuerybuilder();
         $query = $qb
@@ -33,7 +32,10 @@ class Projects extends ModelBase
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
             ->leftJoin('projects_skills', 'projects_skills.prj_id', '=', 'projects.prj_id')
             ->leftJoin('skills', 'projects_skills.skl_id', '=', 'skills.skl_id')
-            ->groupBy('projects.prj_id');
+            ->groupBy('projects.prj_id')
+            ->limit($filters['limit'])
+            ->offset($filters['offset']);
+        ;
 
         if (!empty($filters['acc_id'])) {
             $query->where('accounts.acc_id', $filters['acc_id']);
