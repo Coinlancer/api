@@ -5,6 +5,7 @@ namespace App\Lib;
 class Response extends \Phalcon\Http\Response
 {
     const ERR_SERVICE = 'ERR_SERVICE';
+    const ERR_MAIL_SERVICE = 'ERR_MAIL_SERVICE';
     const ERR_NOT_FOUND = 'ERR_NOT_FOUND';
     const ERR_ALREADY_EXISTS = 'ERR_ALREADY_EXISTS';
     const ERR_BAD_PARAM = 'ERR_BAD_PARAM';
@@ -12,6 +13,8 @@ class Response extends \Phalcon\Http\Response
     const ERR_NOT_ACTIVATED = 'ERR_NOT_ACTIVATED';
     const ERR_BAD_SIGN = 'ERR_BAD_SIGN';
     const ERR_NOT_ALLOWED = 'ERR_NOT_ALLOWED';
+    const ERR_DUPLICATE = 'ERR_DUPLICATE';
+    const ERR_FILESIZE = 'ERR_FILESIZE';
 
     public function error($err_code, $msg = '', $http_code = 400)
     {

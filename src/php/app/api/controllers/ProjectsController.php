@@ -11,13 +11,34 @@ class ProjectsController extends ControllerBase
     public function indexAction()
     {
         $filters = [
-            'limit' => +$this->request->getQuery('limit'),
-            'offset' => +$this->request->getQuery('offset')
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset'),
+            'min_budget' => (int) $this->request->getQuery('min_budget'),
+            'max_budget' => (int) $this->request->getQuery('max_budget'),
+            'skills' => $this->parseQuerySkills($this->request->getQuery('skills')),
+            'subcategory_id' => (int) $this->request->getQuery('subcategory_id'),
         ];
 
         $projects = Projects::getExtended($filters);
 
-        return $this->response->json($projects);
+        $min_budget = Projects::getMinBudget();
+        $max_budget = Projects::getMaxBudget();
+
+        return $this->response->json(['projects' => $projects, 'min_budget' => $min_budget, 'max_budget' => $max_budget]);
+    }
+
+    protected function parseQuerySkills($skills_string)
+    {
+        $skills = explode(',', $skills_string);
+
+        foreach ($skills as $key => $skill) {
+            $skills[$key] = (int) $skill;
+            if ($skills[$key] == 0) {
+                unset($skills[$key]);
+            }
+        }
+
+        return $skills;
     }
 
     // TODO: maybe refactor and move to each own routes instead
@@ -36,6 +57,9 @@ class ProjectsController extends ControllerBase
                 'accounts.acc_name',
                 'accounts.acc_id',
                 'accounts.acc_surname',
+                'accounts.acc_skype',
+                'accounts.acc_phone',
+                'accounts.acc_email',
             ])
             ->join('clients', 'clients.cln_id', '=', 'projects.cln_id')
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
@@ -74,11 +98,13 @@ class ProjectsController extends ControllerBase
         $freelancers = $this->querybuilder
             ->table('accounts')
             ->select([
+                'freelancers.frl_id',
                 'accounts.acc_id',
                 'accounts.acc_name',
                 'accounts.acc_surname',
                 'accounts.acc_login',
                 'accounts.acc_email',
+                'accounts.acc_phone',
                 'projects_freelancers.prf_is_hired',
                 'projects_freelancers.prf_price',
                 'projects_freelancers.prf_message',
@@ -91,7 +117,7 @@ class ProjectsController extends ControllerBase
             ->where('projects_freelancers.prj_id', $id)
             ->get();
 
-        $suggestion = $this->getAccountSuggestion($this->account_id, $project->prj_id);
+        $suggestion = $this->getProjectSuggestion($project->prj_id);
 
         return $this->response->json([
             'project'     => $project,
@@ -99,10 +125,9 @@ class ProjectsController extends ControllerBase
             'attachments' => $attachments->toArray(),
             'category'    => $category,
             'subcategory' => $subcategory,
-            'category'    => $category,
             'skills'      => $skills,
             'freelancers' => $freelancers,
-            'suggestion'  => $suggestion
+            'suggestion'  => !empty($suggestion) ? $suggestion : null
         ]);
     }
 
@@ -127,6 +152,27 @@ class ProjectsController extends ControllerBase
 
         if (!$suggestion) {
             return null;
+        }
+
+        return $suggestion;
+    }
+
+    protected function getProjectSuggestion($project_id)
+    {
+        $suggestion = $this->querybuilder
+            ->table('projects_freelancers')
+            ->select([
+                'projects_freelancers.*',
+                'freelancers.*',
+            ])
+            ->join('freelancers', 'freelancers.frl_id', '=', 'projects_freelancers.frl_id')
+            ->where('projects_freelancers.prj_id', $project_id)
+            ->where('projects_freelancers.prf_is_hired', 1)
+            ->limit(1)
+            ->get();
+
+        if ($suggestion && $suggestion[0]) {
+            $suggestion = $suggestion[0];
         }
 
         return $suggestion;
@@ -177,130 +223,51 @@ class ProjectsController extends ControllerBase
         $project->sct_id = $raw_project['subcategory_id'];
         $project->save();
 
-//        $this->saveProjectSkills($raw_project['skills'], $project->prj_id);
-//        $this->saveProjectSubcategories($raw_project['subcategories'], $project->prj_id);
-
         return $this->response->json();
     }
 
-//    protected function saveProjectSkills($skills, $project_id)
-//    {
-//        if (!$skills) {
-//            return false;
-//        }
-//
-//        $data = [];
-//
-//        foreach ($skills as $skill_id) {
-//            $data[] = [
-//                'skl_id' => $skill_id,
-//                'prj_id' => $project_id
-//            ];
-//        }
-//
-//        $this->querybuilder
-//            ->table('projects_skills')
-//            ->insert($data);
-//
-//        return true;
-//    }
-
-//    protected function saveProjectSubcategories($subcategories, $project_id)
-//    {
-//        if (!$subcategories) {
-//            return false;
-//        }
-//
-//        $data = [];
-//
-//        foreach ($subcategories as $subcategory_id) {
-//            $data[] = [
-//                'sct_id' => $subcategory_id,
-//                'prj_id' => $project_id
-//            ];
-//        }
-//
-//        $this->querybuilder
-//            ->table('projects_subcategories')
-//            ->insert($data);
-//
-//        return true;
-//    }
-
     public function addSkillAction($project_id)
     {
-        $skill_id = $this->request->getPost('skill_id');
+        $required_parameters = ['skill_id'];
 
-        $this->querybuilder
-            ->table('projects_skills')
-            ->insert([
-                'prj_id' => $project_id,
-                'skl_id' => $skill_id
-            ]);
+        $post = $this->getPost($required_parameters);
+
+        $this->checkProjectOwner($project_id);
+
+        try {
+            $this->querybuilder
+                ->table('projects_skills')
+                ->insert([
+                    'prj_id' => $project_id,
+                    'skl_id' => $post['skill_id']
+                ]);
+        } catch (\Exception $e) {
+            return $this->response->error(Response::ERR_DUPLICATE, $e->getMessage());
+        }
 
         return $this->response->json();
     }
 
     public function deleteSkillAction($project_id)
     {
-        $skill_id = $this->request->getPost('skill_id');
+        $required_parameters = ['skill_id'];
 
-        $this->querybuilder
-            ->table('projects_skills')
-            ->where('prj_id', $project_id)
-            ->where('skl_id', $skill_id)
-            ->delete();
+        $post = $this->getPost($required_parameters);
+
+        $this->checkProjectOwner($project_id);
+
+        try {
+            $this->querybuilder
+                ->table('projects_skills')
+                ->where('prj_id', $project_id)
+                ->where('skl_id', $post['skill_id'])
+                ->delete();
+        } catch (\Exception $e) {
+            return $this->response->error(Response::ERR_SERVICE, $e->getMessage());
+        }
 
         return $this->response->json();
     }
-
-    //    protected function saveSteps($steps, $project_id)
-//    {
-//        $steps_array = json_decode($steps, true);
-//
-//        $steps = [];
-//
-//        foreach ($steps_array as $one_step) {
-//            $step = new Steps;
-//
-//            $step->prj_id = $project_id;
-//            $step->stp_title = $one_step['title'];
-//            $step->stp_description = $one_step['description'];
-//            $step->stp_budget = $one_step['budget'];
-//            $step->save();
-//
-//            $steps[] = ['id' => $step->stp_id];
-//        }
-//
-//        return $steps;
-//    }
-//
-//    protected function saveAttachments($project_id)
-//    {
-//        $random = new \Phalcon\Security\Random;
-//
-//        $attachments = [];
-//
-//        if ($this->request->hasFiles()) {
-//            foreach ($this->request->getUploadedFiles() as $file) {
-//                $path = $this->config->path_to_files . '/project_attachments/' . $random->base64(12) . '_' . $file->getName();
-//                $file->moveTo($path);
-//
-//                $attachment = new Attachments;
-//                $attachment->tch_title = $file->getName();
-//                $attachment->tch_path = $path;
-//                $attachment->prj_id = $project_id;
-//                $attachment->save();
-//
-//                $attachments[] = [
-//                    'title' => $file->getName(),
-//                    'path'  => $path
-//                ];
-//            }
-//        }
-//
-//        return $attachments;
-//    }
 
     public function testAction()
     {

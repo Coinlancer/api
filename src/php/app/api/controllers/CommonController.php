@@ -60,7 +60,10 @@ class CommonController extends ControllerBase
             ->get();
 
         foreach ($freelancers as $key => $freelancer) {
-            $freelancers[$key] = \App\Models\Accounts::sanitise($freelancer);
+            unset($freelancer->acc_password);
+            unset($freelancer->acc_verification_key);
+
+            $freelancers[$key] = $freelancer;
         }
 
         return $this->response->json($freelancers);

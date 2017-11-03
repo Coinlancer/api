@@ -2,15 +2,8 @@
 
 namespace App\Models;
 
-use Phalcon\Mvc\Model;
-use Phalcon\Exception;
-
-class Freelancers extends Model
+class Freelancers extends ModelBase
 {
-    public $frl_id;
-    public $acc_id;
-    public $frl_description;
-
     public static function createFreelancer($account_id)
     {
         $freelancer = new self();

@@ -26,6 +26,18 @@ $router->addGet('/account/{id}', [
     'controller' => 'Accounts',
     'action'     => 'show',
 ]);
+$router->addPost('/account/update', [
+    'controller' => 'Accounts',
+    'action'     => 'update',
+]);
+$router->addPost('/account/password/update', [
+    'controller' => 'Accounts',
+    'action'     => 'updatePassword',
+]);
+$router->addPost('/account/send-emails', [
+    'controller' => 'Accounts',
+    'action'     => 'sendEmails',
+]);
 //$router->addGet('/reviews/account/{id}', [
 //    'controller' => 'Accounts',
 //    'action'     => 'showReviews',
@@ -97,11 +109,11 @@ $router->addPost('/projects/{project_id}/steps', [
     'controller' => 'steps',
     'action'     => 'create',
 ]);
-$router->addPost('/projects/steps/{id}', [
+$router->addPost('/projects/{project_id}/steps/{id}', [
     'controller' => 'steps',
     'action'     => 'update',
 ]);
-$router->addPost('/projects/steps/{id}/delete', [
+$router->addPost('/projects/{project_id}/steps/{id}/delete', [
     'controller' => 'steps',
     'action'     => 'delete',
 ]);
@@ -110,7 +122,11 @@ $router->addPost('/projects/{id}/attachments', [
     'controller' => 'attachments',
     'action'     => 'save',
 ]);
-$router->addPost('/projects/attachments/{id}/delete', [
+$router->addGet('/projects/{project_id}/attachments/{id}', [
+    'controller' => 'attachments',
+    'action'     => 'get',
+]);
+$router->addPost('/projects/{project_id}/attachments/{id}/delete', [
     'controller' => 'attachments',
     'action'     => 'delete',
 ]);
@@ -128,11 +144,32 @@ $router->addPost('/projects/{id}/suggestions', [
     'controller' => 'suggestions',
     'action'     => 'create',
 ]);
-$router->addPost('/projects/suggestions/{id}/delete', [
+$router->addPost('/projects/{project_id}/suggestions/delete', [
     'controller' => 'suggestions',
     'action'     => 'delete',
 ]);
-$router->addPost('/projects/suggestions/{id}/confirm', [
+$router->addPost('/projects/suggestions/confirm', [
     'controller' => 'suggestions',
     'action'     => 'confirm',
+]);
+// freelancers
+$router->addGet('/freelancers/{id}', [
+    'controller' => 'freelancers',
+    'action'     => 'show',
+]);
+$router->addGet('/freelancers/suggestions', [
+    'controller' => 'freelancers',
+    'action'     => 'suggestions',
+]);
+$router->addGet('/freelancers/works', [
+    'controller' => 'freelancers',
+    'action'     => 'works',
+]);
+$router->addPost('/freelancers/skills/{id}', [
+    'controller' => 'freelancers',
+    'action'     => 'addSkill',
+]);
+$router->addPost('/freelancers/skills/{id}/delete', [
+    'controller' => 'freelancers',
+    'action'     => 'deleteSkill',
 ]);

@@ -94,6 +94,8 @@ $di->setShared("db", function () use ($config) {
        "username" => getenv("DB_USER"),
        "password" => getenv("DB_PASSWORD"),
        "dbname"   => getenv("DB_NAME"),
+       'charset'           => 'utf8',
+       'collation'         => 'utf8_unicode_ci',
        'options' => [
            PDO::ATTR_EMULATE_PREPARES => false,
            PDO::ATTR_STRINGIFY_FETCHES => false,

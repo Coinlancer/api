@@ -13,6 +13,8 @@ services:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d/
     links:
       - php
+    environment:
+      TZ: "Europe/Kiev"
 
   php:
     restart: always
@@ -29,6 +31,8 @@ services:
       - ./.env
     cap_add:
       - ALL
+    environment:
+      TZ: "Europe/Kiev"
 
   mysql:
     restart: always
@@ -52,6 +56,8 @@ services:
     image: memcached:latest
     volumes:
       - ./logs/memcached/:/logs
+    environment:
+      TZ: "Europe/Kiev"
 
 volumes:
   storage:

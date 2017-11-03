@@ -13,7 +13,7 @@ class IndexController extends ControllerBase
 
     public function notFoundAction()
     {
-        return $this->response->error(Response::ERR_NOT_FOUND);
+        return $this->response->error(Response::ERR_NOT_FOUND, 'route');
     }
 
     public function getCategoriesWithProjectsCountAction()

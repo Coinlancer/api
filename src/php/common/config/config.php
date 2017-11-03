@@ -15,7 +15,7 @@ return new \Phalcon\Config([
     'jwt' => [
         'algo' => 'HS512',
         'secret' => 'MpfMRCzpzADu@xXxs%L@ltj8l#zT*pys',
-        'ttl' => 6000,
+        'ttl' => 60 * 1000,
     ],
 
     'path_to_files' => '/files',
@@ -29,7 +29,13 @@ return new \Phalcon\Config([
     ],
 
     'filters' => [
-        'limit' => 25,
+        'limit' => 999,
         'offset' => 0
+    ],
+
+    'files' => [
+        'max_file_size' => 10000000,
+        'root_dir' => '/files'
     ]
+
 ]);
