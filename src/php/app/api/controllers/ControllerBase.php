@@ -2,9 +2,10 @@
 
 namespace App\Controllers;
 
+use \Phalcon\Mvc\Controller;
 use App\Lib\Response;
 
-class ControllerBase extends \Phalcon\Mvc\Controller
+class ControllerBase extends Controller
 {
     protected $account_id;
     protected $token_expired_at;
@@ -24,7 +25,7 @@ class ControllerBase extends \Phalcon\Mvc\Controller
             }
         }
 
-        //Controllers that do not need a signature
+        //Controllers that do not need a signature (jwt token)
         $free_controllers = ['index', 'nonce'];
 
         if (!in_array($dispatcher->getControllerName(), $free_controllers)) {
@@ -59,42 +60,6 @@ class ControllerBase extends \Phalcon\Mvc\Controller
 
         return true;
     }
-
-//    public function createToken($userId)
-//    {
-//        $tokenId    = base64_encode(openssl_random_pseudo_bytes(32));
-//        $issuedAt   = $notBefore = time();
-//        $expire     = $notBefore + $this->config->jwt->ttl;
-//        $serverName = 'test';
-//
-//        $data = [
-//            'iat'  => $issuedAt,         // Issued at: time when the token was generated
-//            'jti'  => $tokenId,          // Json Token Id: an unique identifier for the token
-//            'iss'  => $serverName,       // Issuer
-//            'nbf'  => $notBefore,        // Not before
-//            'exp'  => $expire,           // Expire
-//            'data' => [                  // Data related to the signer user
-//                'userId'   => $userId // userid from the users table
-//            ]
-//        ];
-//
-//        $secretKey = $this->config->jwt->secret;
-//        $algo = $this->config->jwt->algo;
-//
-//        /*
-//         * Encode the array to a JWT string.
-//         * Second parameter is the key to encode the token.
-//         *
-//         * The output string can be validated at http://jwt.io/
-//         */
-//        $jwt = JWT::encode(
-//            $data,      //Data to be encoded in the JWT
-//            $secretKey, // The signing key
-//            $algo     // Algorithm used to sign the token, see https://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40#section-3
-//        );
-//
-//        return $jwt;
-//    }
 
     public function buildUrl($path = null)
     {
@@ -134,5 +99,35 @@ class ControllerBase extends \Phalcon\Mvc\Controller
         }
 
         return true;
+    }
+
+    protected function getQuerySkills($skills_string)
+    {
+        $skills = explode(',', $skills_string);
+
+        foreach ($skills as $key => $skill) {
+            $skills[$key] = (int) $skill;
+            if ($skills[$key] == 0) {
+                unset($skills[$key]);
+            }
+        }
+
+        sort($skills);
+
+        return implode(",", $skills);
+    }
+
+    protected function getProjectIfOwner($project_id)
+    {
+        $project = $this->querybuilder
+            ->table('accounts')
+            ->select('*')
+            ->join('clients', 'clients.acc_id', '=', 'accounts.acc_id')
+            ->join('projects', 'projects.cln_id', '=', 'clients.cln_id')
+            ->where('accounts.acc_id', $this->account_id)
+            ->where('projects.prj_id', $project_id)
+            ->get();
+
+        return reset($project);
     }
 }

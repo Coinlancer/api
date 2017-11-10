@@ -6,6 +6,11 @@ use Phalcon\Di;
 
 class Projects extends ModelBase
 {
+    const STATUS_CREATED = 0;
+    const STATUS_ACTIVE = 1;
+    const STATUS_COMPLETED = 2;
+    const STATUS_CANCELED = 3;
+
     public static function getExtended(array $filters = [])
     {
         $config = Di::getDefault()->getConfig();
@@ -22,6 +27,7 @@ class Projects extends ModelBase
                 'accounts.acc_name',
                 'accounts.acc_surname',
                 $qb->raw('GROUP_CONCAT(DISTINCT concat(skills.skl_id, ":", skills.skl_title) SEPARATOR ",") as skills'),
+                $qb->raw('GROUP_CONCAT(`projects_skills`.skl_id) as skill_ids')
             ])
             ->join('clients', 'clients.cln_id', '=', 'projects.cln_id')
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
@@ -31,18 +37,17 @@ class Projects extends ModelBase
             ->groupBy('projects.prj_id')
             ->limit($filters['limit'])
             ->offset($filters['offset']);
-        ;
 
         if (!empty($filters['acc_id'])) {
             $query->where('accounts.acc_id', $filters['acc_id']);
         }
 
-        if (!empty($filters['ids'])) {
-            $query->whereIn('projects.prj_id', $filters['ids']);
+        if (isset($filters['status'])) {
+            $query->where('projects.prj_status', $filters['status']);
         }
 
-        if (!empty($filters['skills'])) {
-            $query->whereIn('skills.skl_id', $filters['skills']);
+        if (!empty($filters['ids'])) {
+            $query->whereIn('projects.prj_id', $filters['ids']);
         }
 
         if (!empty($filters['min_budget'])) {
@@ -55,6 +60,16 @@ class Projects extends ModelBase
 
         if (!empty($filters['subcategory_id'])) {
             $query->where('projects.sct_id', '=', $filters['subcategory_id']);
+        }
+
+        if (!empty($filters['content'])) {
+            $query
+                ->where('prj_title', 'like', '%' . $filters['content'] . '%')
+                ->orWhere('prj_description', 'like', '%' . $filters['content'] . '%');
+        }
+
+        if (!empty($filters['skills'])) {
+            $query->having('skill_ids', 'like', '%' . $filters['skills'] . '%');
         }
 
         $projects = $query->get();

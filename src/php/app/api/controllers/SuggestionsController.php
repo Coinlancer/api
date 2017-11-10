@@ -3,22 +3,52 @@
 namespace App\Controllers;
 
 use App\Lib\Response;
+use App\Models\Projects;
 
 class SuggestionsController extends ControllerBase
 {
     public function indexAction($id)
     {
-        $suggestions = \App\Models\ProjectsFreelancers::find([
-            "conditions" => "prj_id = ?1",
-            "bind" => [1 => $id]
-        ]);
+        $filters = [
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset')
+        ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
+
+        $suggestions = $this->querybuilder
+            ->table('accounts')
+            ->select([
+                'freelancers.frl_id',
+                'accounts.acc_id',
+                'accounts.acc_name',
+                'accounts.acc_surname',
+                'accounts.acc_login',
+                'accounts.acc_email',
+                'accounts.acc_phone',
+                'accounts.acc_skype',
+                'accounts.acc_avatar',
+                'projects_freelancers.prf_is_hired',
+                'projects_freelancers.prf_message',
+                'projects_freelancers.prf_hours',
+                'projects_freelancers.prf_created_at',
+                'projects_freelancers.prf_updated_at'
+            ])
+            ->join('freelancers', 'freelancers.acc_id', '=', 'accounts.acc_id')
+            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
+            ->where('projects_freelancers.prj_id', $id)
+            ->orderBy('projects_freelancers.prf_created_at', 'DESC')
+            ->limit($filters['limit'])
+            ->offset($filters['offset'])
+            ->get();
 
         return $this->response->json($suggestions);
     }
 
     public function createAction($project_id)
     {
-        $required_parameters = ['price', 'hours', 'message'];
+        $required_parameters = ['hours', 'message'];
 
         $post = $this->getPost($required_parameters);
 
@@ -36,7 +66,6 @@ class SuggestionsController extends ControllerBase
         $data = [
             'prj_id' => $project_id,
             'frl_id' => $freelancer->frl_id,
-            'prf_price' => $post['price'],
             'prf_hours' => $post['hours'],
             'prf_message' => $post['message']
         ];
@@ -133,6 +162,12 @@ class SuggestionsController extends ControllerBase
             $this->logger->error('Can not update suggestion.', $suggestion->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
+        }
+
+        $project->prj_status = Projects::STATUS_ACTIVE;
+
+        if (!$project->save()) {
+            $this->logger->error('Can not update project status .', $project->getMessages());
         }
 
         return $this->response->json($suggestion);

@@ -39,8 +39,6 @@ class AuthController extends ControllerBase
             $account->save();
         } catch (\Exception $e) {
             $this->logger->critical('Can not send email to ' . $account->acc_email . ' while registering user. ' . $e->getMessage());
-
-            return $this->response->error(Response::ERR_MAIL_SERVICE);
         }
 
         $token = $this->createJwt($account->acc_id);
@@ -81,26 +79,25 @@ class AuthController extends ControllerBase
 
     public function loginAction()
     {
-        $required_parameters = ['email', 'password'];
+        $required_parameters = ['identificator', 'password'];
 
         $post = $this->getPost($required_parameters);
 
         $account = Accounts::findFirst([
-            "conditions" => "acc_email = ?1",
-            "bind" => [1 => $post['email']]
+            "conditions" => "acc_email = ?1 or acc_login = ?2",
+            "bind" => [
+                1 => $post['identificator'],
+                2 => $post['identificator']
+            ]
         ]);
 
         if (!$account) {
-            return $this->response->error(Response::ERR_NOT_FOUND);
+            return $this->response->error(Response::ERR_NOT_FOUND, 'account');
         }
 
         if (!$this->security->checkHash($post['password'], $account->acc_password)) {
-            return $this->response->error(Response::ERR_BAD_PARAM);
+            return $this->response->error(Response::ERR_BAD_PARAM, 'password');
         }
-
-//        if (!$account->acc_is_verified) {
-//            return $this->response->error(Response::ERR_NOT_ACTIVATED);
-//        }
 
         $token = $this->createJwt($account->acc_id);
 

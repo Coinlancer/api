@@ -31,6 +31,7 @@ CREATE TABLE `accounts` (
   `acc_is_email_sent` tinyint(1) NOT NULL DEFAULT '0',
   `acc_phone` varchar(128) DEFAULT NULL,
   `acc_skype` varchar(128) DEFAULT NULL,
+  `acc_avatar` varchar(255) DEFAULT NULL,
   `acc_password` text NOT NULL,
   `acc_description` text,
   `acc_verification_key` text NOT NULL,
@@ -110,6 +111,7 @@ CREATE TABLE `projects` (
   `sct_id` int(11) DEFAULT NULL,
   `prj_title` varchar(255) DEFAULT NULL,
   `prj_description` text,
+  `prj_status` tinyint(1) NOT NULL DEFAULT '0',
   `prj_budget` decimal(11,2) DEFAULT NULL,
   `prj_deadline` timestamp NULL DEFAULT NULL,
   `prj_created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -133,7 +135,6 @@ CREATE TABLE `projects_freelancers` (
   `prj_id` int(11) NOT NULL,
   `frl_id` int(11) NOT NULL,
   `prf_is_hired` tinyint(1) NOT NULL DEFAULT '0',
-  `prf_price` decimal(11,0) DEFAULT NULL,
   `prf_message` text,
   `prf_hours` int(11) DEFAULT NULL,
   `prf_created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -207,20 +208,6 @@ CREATE TABLE `reviews_freelancers` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `skills`
---
-
-DROP TABLE IF EXISTS `skills`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `skills` (
-  `skl_id` int(11) NOT NULL AUTO_INCREMENT,
-  `skl_title` varchar(255) NOT NULL,
-  PRIMARY KEY (`skl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `skills_freelancers`
 --
 
@@ -251,9 +238,8 @@ CREATE TABLE `steps` (
   `stp_title` varchar(255) NOT NULL,
   `stp_description` text,
   `stp_budget` decimal(6,2) DEFAULT NULL,
-  `stp_is_freelancer_completed` tinyint(1) NOT NULL DEFAULT '0',
-  `stp_is_client_completed` tinyint(1) NOT NULL DEFAULT '0',
-  `stp_is_deposited` tinyint(1) NOT NULL DEFAULT '0',
+  `stp_status` tinyint(1) NOT NULL DEFAULT '0',
+  `stp_tx_hash` CHAR(66),
   `stp_created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `stp_updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`stp_id`),
@@ -322,6 +308,23 @@ LOCK TABLES `categories` WRITE;
 INSERT INTO `categories` VALUES (1,'Web, Mobile & Software Dev',''),(2,'IT & Networking',''),(3,'Data Science & Analytics',''),(4,'Engineering & Architecture',''),(5,'Design & Creative',''),(6,'Writing',''),(7,'Translation',''),(8,'Legal',''),(9,'Admin Support',''),(10,'Customer Service',''),(11,'Sales & Marketing',''),(12,'Accounting & Consulting','');
 /*!40000 ALTER TABLE `categories` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `projects_skills`
+--
+
+DROP TABLE IF EXISTS `projects_skills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `projects_skills` (
+  `skl_id` int(11) NOT NULL,
+  `prj_id` int(11) NOT NULL,
+  PRIMARY KEY (`skl_id`,`prj_id`),
+  KEY `skl_prj_prj__fc` (`prj_id`),
+  CONSTRAINT `skl_prj_prj__fc` FOREIGN KEY (`prj_id`) REFERENCES `projects` (`prj_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `skl_prj_skl__fc` FOREIGN KEY (`skl_id`) REFERENCES `skills` (`skl_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `subcategories`

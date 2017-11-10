@@ -1,12 +1,15 @@
 FROM php:7.0-fpm
 
 RUN apt-get update && apt-get install -y \
-    git cron libpq-dev libxml2-dev htop nano memcached unzip libmemcached-dev make openvpn\
+    git cron  libpng-dev libjpeg62-turbo-dev libpq-dev libxml2-dev htop nano memcached unzip libmemcached-dev make openvpn\
     && docker-php-ext-install soap \
     && docker-php-ext-install pcntl \
     && docker-php-ext-install zip \
     && docker-php-ext-install bcmath \
     && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-configure gd --with-jpeg-dir=/usr \
+    && docker-php-ext-install gd \
+    && docker-php-ext-install bcmath \
     # Phalcon
     && git clone --depth=1 -b 3.0.x git://github.com/phalcon/cphalcon.git /usr/local/src/cphalcon \
     && cd /usr/local/src/cphalcon/build && ./install \

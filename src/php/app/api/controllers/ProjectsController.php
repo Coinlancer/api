@@ -15,9 +15,14 @@ class ProjectsController extends ControllerBase
             'offset' => (int) $this->request->getQuery('offset'),
             'min_budget' => (int) $this->request->getQuery('min_budget'),
             'max_budget' => (int) $this->request->getQuery('max_budget'),
-            'skills' => $this->parseQuerySkills($this->request->getQuery('skills')),
+            'skills' => $this->getQuerySkills($this->request->getQuery('skills')),
             'subcategory_id' => (int) $this->request->getQuery('subcategory_id'),
+            'content' => $this->request->getQuery('content'),
+            'status' => Projects::STATUS_CREATED
         ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
 
         $projects = Projects::getExtended($filters);
 
@@ -27,26 +32,13 @@ class ProjectsController extends ControllerBase
         return $this->response->json(['projects' => $projects, 'min_budget' => $min_budget, 'max_budget' => $max_budget]);
     }
 
-    protected function parseQuerySkills($skills_string)
-    {
-        $skills = explode(',', $skills_string);
-
-        foreach ($skills as $key => $skill) {
-            $skills[$key] = (int) $skill;
-            if ($skills[$key] == 0) {
-                unset($skills[$key]);
-            }
-        }
-
-        return $skills;
-    }
-
     // TODO: maybe refactor and move to each own routes instead
     public function showAction($id)
     {
         $project = $this->querybuilder
             ->table('projects')
             ->select([
+                'clients.cln_id',
                 'projects.prj_id',
                 'projects.prj_title',
                 'projects.prj_description',
@@ -60,6 +52,7 @@ class ProjectsController extends ControllerBase
                 'accounts.acc_skype',
                 'accounts.acc_phone',
                 'accounts.acc_email',
+                'accounts.acc_avatar',
             ])
             ->join('clients', 'clients.cln_id', '=', 'projects.cln_id')
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
@@ -95,29 +88,7 @@ class ProjectsController extends ControllerBase
             $category = \App\Models\Categories::findFirstByCatId($subcategory->cat_id);
         }
 
-        $freelancers = $this->querybuilder
-            ->table('accounts')
-            ->select([
-                'freelancers.frl_id',
-                'accounts.acc_id',
-                'accounts.acc_name',
-                'accounts.acc_surname',
-                'accounts.acc_login',
-                'accounts.acc_email',
-                'accounts.acc_phone',
-                'projects_freelancers.prf_is_hired',
-                'projects_freelancers.prf_price',
-                'projects_freelancers.prf_message',
-                'projects_freelancers.prf_hours',
-                'projects_freelancers.prf_created_at',
-                'projects_freelancers.prf_updated_at'
-            ])
-            ->join('freelancers', 'freelancers.acc_id', '=', 'accounts.acc_id')
-            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
-            ->where('projects_freelancers.prj_id', $id)
-            ->get();
-
-        $suggestion = $this->getProjectSuggestion($project->prj_id);
+        $hired_suggestion = $this->getProjectHiredSuggestion($project->prj_id);
 
         return $this->response->json([
             'project'     => $project,
@@ -126,8 +97,7 @@ class ProjectsController extends ControllerBase
             'category'    => $category,
             'subcategory' => $subcategory,
             'skills'      => $skills,
-            'freelancers' => $freelancers,
-            'suggestion'  => !empty($suggestion) ? $suggestion : null
+            'hired_suggestion'  => !empty($hired_suggestion) ? $hired_suggestion : null
         ]);
     }
 
@@ -138,7 +108,6 @@ class ProjectsController extends ControllerBase
             ->select([
                 'accounts.acc_id',
                 'projects_freelancers.prf_is_hired',
-                'projects_freelancers.prf_price',
                 'projects_freelancers.prf_message',
                 'projects_freelancers.prf_hours',
                 'projects_freelancers.prf_created_at',
@@ -157,7 +126,7 @@ class ProjectsController extends ControllerBase
         return $suggestion;
     }
 
-    protected function getProjectSuggestion($project_id)
+    protected function getProjectHiredSuggestion($project_id)
     {
         $suggestion = $this->querybuilder
             ->table('projects_freelancers')
@@ -171,20 +140,27 @@ class ProjectsController extends ControllerBase
             ->limit(1)
             ->get();
 
-        if ($suggestion && $suggestion[0]) {
-            $suggestion = $suggestion[0];
-        }
-
-        return $suggestion;
+        return reset($suggestion);
     }
 
     public function getByAccountAction($id)
     {
+        $id = intval($id);
+
         if (empty($id)) {
             return $this->response->error(Response::ERR_EMPTY_PARAM, 'account_id');
         }
 
-        $projects = Projects::getExtended(['acc_id' => $id]);
+        $filters = [
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset'),
+            'acc_id' => $id
+        ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
+
+        $projects = Projects::getExtended($filters);
 
         return $this->response->json($projects);
     }

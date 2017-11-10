@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Phalcon\DI;
+
 class Accounts extends ModelBase
 {
     public static function createAccount($post)
@@ -101,43 +102,34 @@ class Accounts extends ModelBase
         return true;
     }
 
-//    public static function getPublicAccount($account_id)
-//    {
-//        $account = self::findFirst($account_id);
-//
-//        if (!$account) {
-//            return false;
-//        }
-//
-//        $account = self::sanitise($account);
-//
-//        $account = $account->toArray();
-//
-//        $account['cln_id'] = null;
-//        $account['frl_id'] = null;
-//
-//        $client = Clients::findFirstByAccId($account['acc_id']);
-//
-//        if ($client) {
-//            $account['cln_id'] = $client->cln_id;
-//        }
-//
-//        $freelancer = Freelancers::findFirstByAccId($account['acc_id']);
-//
-//        if ($freelancer) {
-//            $account['frl_id'] = $freelancer->frl_id;
-//        }
-//
-//        return $account;
-//    }
+    public static function findClientByProjectId($project_id)
+    {
+        $querybuilder = DI::getDefault()->getQuerybuilder();
 
+        $account = $querybuilder
+            ->table('accounts')
+            ->select(['accounts.*'])
+            ->join('clients', 'clients.acc_id', '=', 'accounts.acc_id')
+            ->join('projects', 'projects.cln_id', '=', 'clients.cln_id')
+            ->where('projects.prj_id', $project_id)
+            ->get();
 
-//    public static function sanitise($account)
-//    {
-//        unset($account->acc_password);
-//        unset($account->acc_verification_key);
-//
-//        return $account;
-//    }
+        return reset($account);
+    }
 
+    public static function findFreelancerByProjectId($project_id)
+    {
+        $querybuilder = DI::getDefault()->getQuerybuilder();
+
+        $account = $querybuilder
+            ->table('accounts')
+            ->select(['accounts.*', 'projects_freelancers.prj_id'])
+            ->join('freelancers', 'freelancers.acc_id', '=', 'accounts.acc_id')
+            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
+            ->groupBy('accounts.acc_id')
+            ->where('projects_freelancers.prj_id', $project_id)
+            ->get();
+
+        return reset($account);
+    }
 }

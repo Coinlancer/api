@@ -44,20 +44,36 @@ class CommonController extends ControllerBase
     public function getFreelancersAction()
     {
         $filters = [
-            'limit' => +$this->request->getQuery('limit'),
-            'offset' => +$this->request->getQuery('offset')
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset'),
+            'skills' => $this->getQuerySkills($this->request->getQuery('skills'))
         ];
 
         $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
         $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
 
-        $freelancers = $this->querybuilder
+        $db = $this->querybuilder;
+        $query = $db
             ->table('freelancers')
-            ->select('*')
+            ->select([
+                'freelancers.*',
+                'accounts.*',
+                $db->raw('GROUP_CONCAT(`skills_freelancers`.skl_id) as skills')
+            ])
             ->join('accounts', 'accounts.acc_id', '=', 'freelancers.acc_id')
+            ->leftJoin('skills_freelancers', 'freelancers.frl_id', '=', 'skills_freelancers.frl_id')
+            ->groupBy('freelancers.frl_id');
+
+        if (!empty($filters['skills'])) {
+            $query
+                ->having('skills', 'like', "%" . $filters['skills'] . "%");
+        }
+
+        $query
             ->limit($filters['limit'])
-            ->offset($filters['offset'])
-            ->get();
+            ->offset($filters['offset']);
+
+        $freelancers = $query->get();
 
         foreach ($freelancers as $key => $freelancer) {
             unset($freelancer->acc_password);

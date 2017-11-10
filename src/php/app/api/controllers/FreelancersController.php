@@ -11,23 +11,61 @@ class FreelancersController extends ControllerBase
     {
         $freelancer = $this->getFreelancer();
 
+        $filters = [
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset')
+        ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
+
         $suggestions = $this->querybuilder
             ->table('projects_freelancers')
             ->select('*')
             ->join('projects', 'projects.prj_id', '=', 'projects_freelancers.prj_id')
             ->where('frl_id', '=', $freelancer->frl_id)
+            ->orderBy('projects_freelancers.prf_created_at', 'DESC')
+            ->limit($filters['limit'])
+            ->offset($filters['offset'])
             ->get();
 
         return $this->response->json($suggestions);
+    }
+
+    public function projectSuggestionAction($project_id)
+    {
+        $freelancer = $this->getFreelancer();
+
+        $suggestion = $this->querybuilder
+            ->table('projects_freelancers')
+            ->select('*')
+            ->where('frl_id', '=', $freelancer->frl_id)
+            ->where('prj_id', '=', $project_id)
+            ->get();
+
+        return $this->response->json(reset($suggestion));
     }
 
     public function worksAction()
     {
         $freelancer = $this->getFreelancer();
 
-        $works = \App\Models\ProjectsFreelancers::find([
-            'conditions' => 'frl_id = '.$freelancer->frl_id.' and prf_is_hired = 1'
-        ]);
+        $filters = [
+            'limit' => (int) $this->request->getQuery('limit'),
+            'offset' => (int) $this->request->getQuery('offset')
+        ];
+
+        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
+
+        $works = \App\Models\ProjectsFreelancers::find(
+            [
+                'conditions' => 'frl_id = '.$freelancer->frl_id.' and prf_is_hired = 1',
+                'limit' => $filters['limit'],
+                'offset' => $filters['offset'],
+                'order' => 'prf_created_at DESC',
+            ]
+        );
 
         $ids = [];
 
@@ -58,6 +96,7 @@ class FreelancersController extends ControllerBase
                 'accounts.acc_email',
                 'accounts.acc_skype',
                 'accounts.acc_phone',
+                'accounts.acc_avatar',
                 $this->querybuilder->raw('count(projects_freelancers.frl_id) as active_projects_count')
             ])
             ->join('freelancers', 'freelancers.acc_id', '=', 'accounts.acc_id')
@@ -66,22 +105,23 @@ class FreelancersController extends ControllerBase
             ->where('projects_freelancers.prf_is_hired', '1')
             ->get();
 
-        if (count($freelancer) == 1) {
-            $freelancer = (array)$freelancer[0];
+        $freelancer = reset($freelancer);
 
-            $skills = $this->querybuilder
-                ->table('skills')
-                ->select(['skills.*'])
-                ->join('skills_freelancers', 'skills.skl_id', '=', 'skills_freelancers.skl_id')
-                ->join('freelancers', 'freelancers.frl_id', '=', 'skills_freelancers.frl_id')
-                ->where('freelancers.frl_id', $freelancer['frl_id'])
-                ->get();
-
-            $freelancer['skills'] = $skills;
-        } else {
-            $freelancer = false;
+        if (!$freelancer || !$freelancer->acc_id) {
+            return $this->response->error(Response::ERR_NOT_FOUND, 'freelancer');
         }
 
+        $freelancer = (array)$freelancer;
+
+        $skills = $this->querybuilder
+            ->table('skills')
+            ->select(['skills.*'])
+            ->join('skills_freelancers', 'skills.skl_id', '=', 'skills_freelancers.skl_id')
+            ->join('freelancers', 'freelancers.frl_id', '=', 'skills_freelancers.frl_id')
+            ->where('freelancers.frl_id', $freelancer['frl_id'])
+            ->get();
+
+        $freelancer['skills'] = $skills;
 
         return $this->response->json($freelancer);
     }

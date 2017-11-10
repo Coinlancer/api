@@ -18,6 +18,8 @@ return new \Phalcon\Config([
         'ttl' => 60 * 1000,
     ],
 
+    'min_confirmations' => 12,
+
     'path_to_files' => '/files',
 
     'smtp' => [
@@ -29,13 +31,20 @@ return new \Phalcon\Config([
     ],
 
     'filters' => [
-        'limit' => 999,
+        'limit' => 25,
         'offset' => 0
     ],
 
     'files' => [
         'max_file_size' => 10000000,
         'root_dir' => '/files'
+    ],
+
+    'pictures' => [
+        'avatars' => [
+            'width' => '512',
+            'height' => '512'
+        ]
     ]
 
 ]);

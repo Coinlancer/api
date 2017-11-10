@@ -11,6 +11,7 @@ services:
       - ./src:/src
       - ./logs/nginx/:/logs
       - ./docker/nginx/conf.d:/etc/nginx/conf.d/
+      - ./files:/files
     links:
       - php
     environment:

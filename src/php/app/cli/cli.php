@@ -11,34 +11,6 @@ define('TEMP_PATH', APP_PATH . 'temp/');
 
 class CliApplication
 {
-    protected function _registerServices()
-    {
-        # Register config
-        $config = require_once(CONFIG_PATH . 'config.php');
-
-        $loader = new \Phalcon\Loader();
-
-        # Register tasks
-        $loader->registerDirs([
-            APP_PATH . 'app/cli/tasks/',
-        ]);
-
-        # Register common namespaces
-        $loader->registerNamespaces([
-            'App\Models' => APP_PATH . 'common/models',
-            'App\Lib'    => APP_PATH . 'common/lib',
-        ]);
-
-        $loader->register();
-
-
-        $di = new Phalcon\Di\FactoryDefault\Cli;
-
-        require_once(CONFIG_PATH . 'services.php');
-
-        return $di;
-    }
-
     public function __construct()
     {
         global $argv;
@@ -84,6 +56,34 @@ class CliApplication
             echo $e->getMessage();
             exit(255);
         }
+    }
+
+    protected function _registerServices()
+    {
+        # Register config
+        $config = require_once(CONFIG_PATH . 'config.php');
+
+        $loader = new \Phalcon\Loader();
+
+        # Register tasks
+        $loader->registerDirs([
+            APP_PATH . 'app/cli/tasks/',
+        ]);
+
+        # Register common namespaces
+        $loader->registerNamespaces([
+            'App\Models' => APP_PATH . 'common/models',
+            'App\Lib'    => APP_PATH . 'common/lib',
+        ]);
+
+        $loader->register();
+
+
+        $di = new Phalcon\Di\FactoryDefault\Cli;
+
+        require_once(CONFIG_PATH . 'services.php');
+
+        return $di;
     }
 
     private function isAlreadyRunning()

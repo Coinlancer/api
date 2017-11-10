@@ -38,15 +38,14 @@ $router->addPost('/account/send-emails', [
     'controller' => 'Accounts',
     'action'     => 'sendEmails',
 ]);
-//$router->addGet('/reviews/account/{id}', [
-//    'controller' => 'Accounts',
-//    'action'     => 'showReviews',
-//]);
-//$router->addPost('/reviews/account/{id}', [
-//    'controller' => 'Accounts',
-//    'action'     => 'saveReview',
-//]);
-
+$router->addPost('/account/avatar', [
+    'controller' => 'Accounts',
+    'action'     => 'saveAvatar',
+]);
+$router->addPost('/account/avatar/delete', [
+    'controller' => 'Accounts',
+    'action'     => 'deleteAvatar',
+]);
 // common functions
 $router->addGet('/skills', [
     'controller' => 'Common',
@@ -117,6 +116,28 @@ $router->addPost('/projects/{project_id}/steps/{id}/delete', [
     'controller' => 'steps',
     'action'     => 'delete',
 ]);
+
+//steps finances
+$router->addPost('/projects/steps/{id}/deposit', [
+    'controller' => 'steps',
+    'action'     => 'deposit',
+]);
+
+$router->addPost('/projects/steps/{id}/done', [
+    'controller' => 'steps',
+    'action'     => 'markAsDone',
+]);
+
+$router->addPost('/projects/steps/{id}/complete', [
+    'controller' => 'steps',
+    'action'     => 'markAsCompleted',
+]);
+
+$router->addPost('/projects/steps/{id}/refund', [
+    'controller' => 'steps',
+    'action'     => 'refund',
+]);
+
 // attachments
 $router->addPost('/projects/{id}/attachments', [
     'controller' => 'attachments',
@@ -152,6 +173,11 @@ $router->addPost('/projects/suggestions/confirm', [
     'controller' => 'suggestions',
     'action'     => 'confirm',
 ]);
+// clients
+$router->addGet('/clients/{id}', [
+    'controller' => 'clients',
+    'action'     => 'show',
+]);
 // freelancers
 $router->addGet('/freelancers/{id}', [
     'controller' => 'freelancers',
@@ -160,6 +186,10 @@ $router->addGet('/freelancers/{id}', [
 $router->addGet('/freelancers/suggestions', [
     'controller' => 'freelancers',
     'action'     => 'suggestions',
+]);
+$router->addGet('/freelancers/suggestions/project/{project_id}', [
+    'controller' => 'freelancers',
+    'action'     => 'projectSuggestion',
 ]);
 $router->addGet('/freelancers/works', [
     'controller' => 'freelancers',
