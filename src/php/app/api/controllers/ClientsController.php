@@ -3,10 +3,10 @@
 namespace App\Controllers;
 
 use App\Lib\Response;
+use App\Models\Projects;
 
 class ClientsController extends ControllerBase
 {
-
     public function showAction($id)
     {
         $client = $this->querybuilder
@@ -22,10 +22,8 @@ class ClientsController extends ControllerBase
                 'accounts.acc_skype',
                 'accounts.acc_phone',
                 'accounts.acc_avatar',
-                $this->querybuilder->raw('count(projects.cln_id) as active_projects_count')
             ])
             ->join('clients', 'clients.acc_id', '=', 'accounts.acc_id')
-            ->join('projects', 'projects.cln_id', '=', 'clients.cln_id')
             ->where('clients.cln_id', $id)
             ->get();
 
@@ -33,6 +31,43 @@ class ClientsController extends ControllerBase
 
         if (!$client || !$client->acc_id) {
             return $this->response->error(Response::ERR_NOT_FOUND, 'Client');
+        }
+
+        $client = (array)$client;
+
+        $client['projects_counters'] = [
+            'active_projects' => 0,
+            'completed_projects' => 0,
+        ];
+
+        $active_projects = $this->querybuilder
+            ->table('projects')
+            ->select([
+                $this->querybuilder->raw('count(projects.prj_id) as count')
+            ])
+            ->where('projects.cln_id', $id)
+            ->where('projects.prj_status', Projects::STATUS_ACTIVE)
+            ->get();
+
+        $active_projects = reset($active_projects);
+
+        if ($active_projects && $active_projects->count) {
+            $client['projects_counters']['active_projects'] = $active_projects->count;
+        }
+
+        $completed_projects = $this->querybuilder
+            ->table('projects')
+            ->select([
+                $this->querybuilder->raw('count(projects.prj_id) as count')
+            ])
+            ->where('projects.cln_id', $id)
+            ->where('projects.prj_status', Projects::STATUS_COMPLETED)
+            ->get();
+
+        $completed_projects = reset($completed_projects);
+
+        if ($completed_projects && $completed_projects->count) {
+            $client['projects_counters']['completed_projects'] = $completed_projects->count;
         }
 
         return $this->response->json($client);

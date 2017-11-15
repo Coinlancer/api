@@ -43,3 +43,7 @@ make attach:
 
 purge:
 	docker-compose down
+
+nginx:
+	docker rm -f coinlancer-api-nginx
+	make build

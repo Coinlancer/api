@@ -3,8 +3,10 @@
 namespace App\Controllers;
 
 use App\Lib\Response;
+use App\Lib\SmartContract;
 use App\Models\Clients;
 use App\Models\Projects;
+use App\Models\Steps;
 
 class ProjectsController extends ControllerBase
 {
@@ -18,16 +20,15 @@ class ProjectsController extends ControllerBase
             'skills' => $this->getQuerySkills($this->request->getQuery('skills')),
             'subcategory_id' => (int) $this->request->getQuery('subcategory_id'),
             'content' => $this->request->getQuery('content'),
+            'deadline_from' => (int) $this->request->getQuery('deadline_from'),
+            'deadline_to' => (int) $this->request->getQuery('deadline_to'),
             'status' => Projects::STATUS_CREATED
         ];
 
-        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
-        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
-
         $projects = Projects::getExtended($filters);
 
-        $min_budget = Projects::getMinBudget();
-        $max_budget = Projects::getMaxBudget();
+        $min_budget = $this->memcached->get('minProjectsBudget');
+        $max_budget = $this->memcached->get('maxProjectsBudget');
 
         return $this->response->json(['projects' => $projects, 'min_budget' => $min_budget, 'max_budget' => $max_budget]);
     }
@@ -35,16 +36,19 @@ class ProjectsController extends ControllerBase
     // TODO: maybe refactor and move to each own routes instead
     public function showAction($id)
     {
-        $project = $this->querybuilder
+        $db = $this->querybuilder;
+
+        $project = $db
             ->table('projects')
             ->select([
                 'clients.cln_id',
                 'projects.prj_id',
                 'projects.prj_title',
                 'projects.prj_description',
-                'projects.prj_budget',
+//                'projects.prj_budget',
                 'projects.prj_deadline',
                 'projects.prj_created_at',
+                'projects.prj_status',
                 'projects.sct_id',
                 'accounts.acc_name',
                 'accounts.acc_id',
@@ -53,10 +57,13 @@ class ProjectsController extends ControllerBase
                 'accounts.acc_phone',
                 'accounts.acc_email',
                 'accounts.acc_avatar',
+                $db->raw('SUM(steps.stp_budget) as prj_budget')
             ])
             ->join('clients', 'clients.cln_id', '=', 'projects.cln_id')
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
+            ->leftJoin('steps', 'projects.prj_id', '=', 'steps.prj_id')
             ->where('projects.prj_id', $id)
+            ->groupBy('projects.prj_id')
             ->first();
 
         if (empty($project)) {
@@ -157,9 +164,6 @@ class ProjectsController extends ControllerBase
             'acc_id' => $id
         ];
 
-        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
-        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
-
         $projects = Projects::getExtended($filters);
 
         return $this->response->json($projects);
@@ -185,19 +189,125 @@ class ProjectsController extends ControllerBase
 
     public function updateAction($id)
     {
-        $raw_project = $this->request->getPost();
+        $id = intval($id);
 
-        $project = Projects::findFirst([
-            "conditions" => "prj_id = ?1",
-            "bind"       => [1 => $id]
-        ]);
+        if (empty($id)) {
+            return $this->response->error(Response::ERR_EMPTY_PARAM, 'project_id');
+        }
+
+//        $required_parameters = ['title', 'description', 'budget', 'deadline', 'subcategory_id'];
+        $required_parameters = ['title', 'description', 'deadline', 'subcategory_id'];
+
+        $raw_project = $this->getPost($required_parameters);
+
+        $client = Clients::findFirstByAccId($this->account_id);
+
+        if (!$client) {
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        $project = Projects::findFirst($id);
+
+        if (empty($project)) {
+            return $this->response->error(Response::ERR_NOT_FOUND, 'project');
+        }
+
+        if (!in_array($project->prj_status, [Projects::STATUS_CREATED, Projects::STATUS_ACTIVE])) {
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        if ($project->cln_id != $client->cln_id) {
+            $this->logger->error('User with account_id ' . $this->account_id . ' tried to update another\'s project');
+
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        if (strtotime($raw_project['deadline']) < time()) {
+            return $this->response->error(Response::ERR_BAD_PARAM, 'deadline');
+        }
 
         $project->prj_title = $raw_project['title'];
         $project->prj_description = $raw_project['description'];
-        $project->prj_budget = $raw_project['budget'];
+//        $project->prj_budget = $raw_project['budget'];
         $project->prj_deadline = $raw_project['deadline'];
         $project->sct_id = $raw_project['subcategory_id'];
         $project->save();
+
+        return $this->response->json();
+    }
+
+    /**
+     * refund all deposited and not completed steps
+     * set canceled project status
+     * @param $id - project_id
+     * @return mixed
+     */
+    public function cancelAction($id)
+    {
+        $id = intval($id);
+
+        if (empty($id)) {
+            return $this->response->error(Response::ERR_EMPTY_PARAM, 'project_id');
+        }
+
+        $client = Clients::findFirstByAccId($this->account_id);
+
+        if (empty($client)) {
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        $project = Projects::findFirst($id);
+
+        if (empty($project)) {
+            $this->response->error(Response::ERR_NOT_FOUND, 'project');
+        }
+
+        if ($project->cln_id != $client->cln_id) {
+            $this->logger->error('User with account_id ' . $this->account_id . ' tried to cancel another\'s project');
+
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        if (!in_array($project->prj_status, [Projects::STATUS_CREATED, Projects::STATUS_ACTIVE])) {
+            return $this->response->error(Response::ERR_NOT_ALLOWED);
+        }
+
+        $project_steps = Steps::findByPrjId($id);
+
+        foreach ($project_steps as $project_step) {
+            if (in_array($project_step->stp_status, [Steps::STATUS_DEPOSITED, Steps::STATUS_MARK_AS_DONE])) {
+                $smartcontract = new SmartContract();
+
+                try {
+                    $result = $smartcontract->refundStep($project_step->stp_id);
+
+                    $step = Steps::findFirst($project_step->stp_id);
+
+                    if ($result) {
+                        $step->stp_status = Steps::STATUS_REFUNDED;
+
+                        if (!$step->save()) {
+                            $this->logger->error('Can not save step after refund [step_id ' . $project_step->stp_id . ']', $step->getMessages());
+
+                            return $this->response->error(Response::ERR_SERVICE);
+                        }
+                    }
+
+                } catch (\Exception $e) {
+                    $this->logger->emergency('Can not refund step with id ' . $project_step->stp_id, [$e->getMessage()]);
+
+                    return $this->response->error(Response::ERR_SERVICE);
+                }
+            }
+        }
+
+        $project->prj_status = Projects::STATUS_CANCELED;
+
+        if (!$project->save()) {
+            $this->logger->emergency('Can not save canceled status of project with id ' . $project->prj_id);
+
+            return $this->response->error(Response::ERR_SERVICE);
+        }
 
         return $this->response->json();
     }
@@ -243,11 +353,5 @@ class ProjectsController extends ControllerBase
         }
 
         return $this->response->json();
-    }
-
-    public function testAction()
-    {
-        var_dump($_FILES);
-        die;
     }
 }

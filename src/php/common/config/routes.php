@@ -13,6 +13,7 @@ $router->addPost('/verify', [
     'controller' => 'Auth',
     'action'     => 'verify',
 ]);
+
 // account
 $router->addPost('/account/role/activate', [
     'controller' => 'Accounts',
@@ -46,6 +47,7 @@ $router->addPost('/account/avatar/delete', [
     'controller' => 'Accounts',
     'action'     => 'deleteAvatar',
 ]);
+
 // common functions
 $router->addGet('/skills', [
     'controller' => 'Common',
@@ -63,6 +65,7 @@ $router->addGet('/freelancers', [
     'controller' => 'Common',
     'action'     => 'getFreelancers',
 ]);
+
 //404 not found
 $router->notFound([
     "controller" => "index",
@@ -89,6 +92,10 @@ $router->addPost('/projects', [
 $router->addPost('/projects/{id}', [ // check
     'controller' => 'projects',
     'action'     => 'update',
+]);
+$router->addPost('/projects/{id}/cancel', [ // check
+    'controller' => 'projects',
+    'action'     => 'cancel',
 ]);
 // skills
 $router->addPost('/projects/{project_id}/skills', [
@@ -122,17 +129,14 @@ $router->addPost('/projects/steps/{id}/deposit', [
     'controller' => 'steps',
     'action'     => 'deposit',
 ]);
-
 $router->addPost('/projects/steps/{id}/done', [
     'controller' => 'steps',
     'action'     => 'markAsDone',
 ]);
-
 $router->addPost('/projects/steps/{id}/complete', [
     'controller' => 'steps',
     'action'     => 'markAsCompleted',
 ]);
-
 $router->addPost('/projects/steps/{id}/refund', [
     'controller' => 'steps',
     'action'     => 'refund',
@@ -150,11 +154,6 @@ $router->addGet('/projects/{project_id}/attachments/{id}', [
 $router->addPost('/projects/{project_id}/attachments/{id}/delete', [
     'controller' => 'attachments',
     'action'     => 'delete',
-]);
-// test file upload
-$router->addPost('/projects/test', [
-    'controller' => 'projects',
-    'action'     => 'test',
 ]);
 // suggestions
 $router->addGet('/projects/{id}/suggestions', [

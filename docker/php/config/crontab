@@ -1,3 +1,5 @@
 #m  h   d   m   d   command
 *   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php register sendMail
 *   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php transaction checkConfirmations
+0   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php projects getMinMaxBudget
+0   *   *   *   *   /usr/local/bin/php /src/php/app/cli/cli.php projects markExpiredProjects

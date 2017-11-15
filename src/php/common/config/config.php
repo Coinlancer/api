@@ -18,7 +18,7 @@ return new \Phalcon\Config([
         'ttl' => 60 * 1000,
     ],
 
-    'min_confirmations' => 12,
+    'min_confirmations' => 1,
 
     'path_to_files' => '/files',
 

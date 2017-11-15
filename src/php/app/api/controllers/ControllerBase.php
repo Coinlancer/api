@@ -114,7 +114,7 @@ class ControllerBase extends Controller
 
         sort($skills);
 
-        return implode(",", $skills);
+        return $skills;
     }
 
     protected function getProjectIfOwner($project_id)

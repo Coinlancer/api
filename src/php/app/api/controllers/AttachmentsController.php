@@ -130,6 +130,8 @@ class AttachmentsController extends ControllerBase
 
     public function deleteAction($project_id, $id)
     {
+        $this->checkProjectOwner($project_id);
+
         $attachment = Attachments::findFirst([
             'conditions' => 'tch_id = ?1 and prj_id = ?2',
             'bind' => [

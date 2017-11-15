@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Lib\Response;
 use App\Models\Projects;
+use Phalcon\Exception;
 
 class FreelancersController extends ControllerBase
 {
@@ -55,9 +56,6 @@ class FreelancersController extends ControllerBase
             'offset' => (int) $this->request->getQuery('offset')
         ];
 
-        $filters['limit'] ?: $filters['limit'] = $this->config->filters->limit;
-        $filters['offset'] ?: $filters['offset'] = $this->config->filters->offset;
-
         $works = \App\Models\ProjectsFreelancers::find(
             [
                 'conditions' => 'frl_id = '.$freelancer->frl_id.' and prf_is_hired = 1',
@@ -75,7 +73,7 @@ class FreelancersController extends ControllerBase
 
         $works = [];
 
-        if ($ids) {
+        if (!empty($ids)) {
             $works = Projects::getExtended(['ids' => $ids]);
         }
 
@@ -97,12 +95,9 @@ class FreelancersController extends ControllerBase
                 'accounts.acc_skype',
                 'accounts.acc_phone',
                 'accounts.acc_avatar',
-                $this->querybuilder->raw('count(projects_freelancers.frl_id) as active_projects_count')
             ])
             ->join('freelancers', 'freelancers.acc_id', '=', 'accounts.acc_id')
-            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
             ->where('freelancers.frl_id', $id)
-            ->where('projects_freelancers.prf_is_hired', '1')
             ->get();
 
         $freelancer = reset($freelancer);
@@ -123,6 +118,47 @@ class FreelancersController extends ControllerBase
 
         $freelancer['skills'] = $skills;
 
+        $freelancer['projects_counters'] = [
+            'active_projects' => 0,
+            'completed_projects' => 0,
+        ];
+
+        $active_projects = $this->querybuilder
+            ->table('freelancers')
+            ->select([
+                $this->querybuilder->raw('count(projects.prj_id) as count')
+            ])
+            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
+            ->join('projects', 'projects.prj_id', '=', 'projects_freelancers.prj_id')
+            ->where('freelancers.frl_id', $id)
+            ->where('projects_freelancers.prf_is_hired', '1')
+            ->where('projects.prj_status', Projects::STATUS_ACTIVE)
+            ->get();
+
+        $active_projects = reset($active_projects);
+
+        if ($active_projects && $active_projects->count) {
+            $freelancer['projects_counters']['active_projects'] = $active_projects->count;
+        }
+
+        $completed_projects = $this->querybuilder
+            ->table('freelancers')
+            ->select([
+                $this->querybuilder->raw('count(projects.prj_id) as count')
+            ])
+            ->join('projects_freelancers', 'projects_freelancers.frl_id', '=', 'freelancers.frl_id')
+            ->join('projects', 'projects.prj_id', '=', 'projects_freelancers.prj_id')
+            ->where('freelancers.frl_id', $id)
+            ->where('projects_freelancers.prf_is_hired', '1')
+            ->where('projects.prj_status', Projects::STATUS_COMPLETED)
+            ->get();
+
+        $completed_projects = reset($completed_projects);
+
+        if ($completed_projects && $completed_projects->count) {
+            $freelancer['projects_counters']['completed_projects'] = $completed_projects->count;
+        }
+
         return $this->response->json($freelancer);
     }
 
@@ -140,7 +176,11 @@ class FreelancersController extends ControllerBase
 //        $skill_freelancer->skl_frl_years = $post['years'];
         $skill_freelancer->skl_frl_years = 1;
 
-        $skill_freelancer->save();
+        try {
+            $skill_freelancer->save();
+        } catch (\Exception $e) {
+            return $this->response->error(Response::ERR_NOT_FOUND, 'skill_id');
+        }
 
         return $this->response->json();
     }

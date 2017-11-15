@@ -58,15 +58,21 @@ class CommonController extends ControllerBase
             ->select([
                 'freelancers.*',
                 'accounts.*',
-                $db->raw('GROUP_CONCAT(`skills_freelancers`.skl_id) as skills')
+                $db->raw('GROUP_CONCAT(skills_freelancers.skl_id) as skills'),
+                $db->raw('GROUP_CONCAT(\'|\', skills_freelancers.skl_id , \'|\') as skill_ids')
             ])
             ->join('accounts', 'accounts.acc_id', '=', 'freelancers.acc_id')
             ->leftJoin('skills_freelancers', 'freelancers.frl_id', '=', 'skills_freelancers.frl_id')
             ->groupBy('freelancers.frl_id');
 
         if (!empty($filters['skills'])) {
-            $query
-                ->having('skills', 'like', "%" . $filters['skills'] . "%");
+            $skills = "%";
+
+            foreach ($filters['skills'] as $skill) {
+                $skills .= '|' . $skill . '|' . '%';
+            }
+
+            $query->having('skill_ids', 'like', $skills);
         }
 
         $query

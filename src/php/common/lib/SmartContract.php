@@ -22,6 +22,8 @@ class SmartContract
             'amount' => bcmul($step_budget, bcpow(10, 18))
         ];
 
+        error_log(print_r($parameters, 1));
+
         $response = $this->makeRequest('/deposit', $parameters);
 
         if (empty($response) || empty($response['tx_hash'])) {
@@ -48,14 +50,26 @@ class SmartContract
     {
         $parameters = ['step' => $step_id];
 
-        return $response = $this->makeRequest('/pay', $parameters); // must be some array result
+        $response = $this->makeRequest('/pay', $parameters); // must be some array result
+
+        if (empty($response) || !isset($response['tx_hash'])) {
+            throw new Exception('Pay method does not return tx_hash in response');
+        }
+
+        return $response['tx_hash'];
     }
 
     public function refundStep($step_id)
     {
         $parameters = ['step' => $step_id];
 
-        return $this->makeRequest('/refund', $parameters); // must be some array result
+        $response = $this->makeRequest('/refund', $parameters); // must be some array result
+
+        if (empty($response) || !isset($response['tx_hash'])) {
+            throw new Exception('Refund method does not return tx_hash in response');
+        }
+
+        return $response['tx_hash'];
     }
 
     protected function makeRequest($url, $parameters)

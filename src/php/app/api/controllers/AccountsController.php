@@ -157,12 +157,13 @@ class AccountsController extends ControllerBase
             return $this->response->error(Response::ERR_BAD_PARAM, 'not allowed file extension.');
         }
 
-        $filename = md5(time()) . '_' . $file->getName();
-        $path = $this->config->files['root_dir'] . '/accounts/avatars/';
         $width = $this->config->pictures['avatars']['width'];
         $height = $this->config->pictures['avatars']['height'];
 
         $image = $this->resizeImage($file->getTempName(), $width, $height);
+
+        $path = $this->config->files['root_dir'] . '/accounts/avatars/';
+        $filename = md5(time()) . '_' . $file->getName();
 
         $image->save($path . $filename);
 
@@ -186,14 +187,13 @@ class AccountsController extends ControllerBase
 
     protected function resizeImage($image, $new_width, $new_height)
     {
-//        $image = new \Phalcon\Image\Adapter\Gd($file->getTempName());
-//        $image->resize(512, 512, \Phalcon\Image::TENSILE);
-
         $image = new \Phalcon\Image\Adapter\GD($image);
+
         $source_height = $image->getHeight();
         $source_width = $image->getWidth();
         $source_aspect_ratio = $source_width / $source_height;
         $desired_aspect_ratio = $new_width / $new_height;
+
         if ($source_aspect_ratio > $desired_aspect_ratio) {
             $temp_height = $new_height;
             $temp_width = ( int ) ($new_height * $source_aspect_ratio);
@@ -201,8 +201,10 @@ class AccountsController extends ControllerBase
             $temp_width = $new_width;
             $temp_height = ( int ) ($new_width / $source_aspect_ratio);
         }
+
         $x0 = ($temp_width - $new_width) / 2;
         $y0 = ($temp_height - $new_height) / 2;
+
         $image->resize($temp_width, $temp_height)->crop($new_width, $new_height, $x0, $y0);
 
         return $image;

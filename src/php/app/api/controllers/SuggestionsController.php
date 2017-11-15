@@ -113,46 +113,47 @@ class SuggestionsController extends ControllerBase
 
     public function confirmAction()
     {
-        $project_id = intval($this->request->getPost('project_id'));
-        $freelancer_id = intval($this->request->getPost('freelancer_id'));
+        $required_parameters = ['project_id', 'freelancer_id'];
 
-        if (empty($project_id)) {
-            return $this->response->error(Response::ERR_EMPTY_PARAM, 'project_id');
-        }
+        $post = $this->getPost($required_parameters);
 
-        if (empty($freelancer_id)) {
-            return $this->response->error(Response::ERR_EMPTY_PARAM, 'freelancer_id');
-        }
+        $this->checkProjectOwner($post['project_id']);
 
-        $project = \App\Models\Projects::findFirst([
-            "conditions" => "prj_id = ?1",
-            "bind"       => [1 => $project_id]
-        ]);
+//        $project_id = intval($this->request->getPost('project_id'));
+//        $freelancer_id = intval($this->request->getPost('freelancer_id'));
+//
+//        if (empty($project_id)) {
+//            return $this->response->error(Response::ERR_EMPTY_PARAM, 'project_id');
+//        }
+//
+//        if (empty($freelancer_id)) {
+//            return $this->response->error(Response::ERR_EMPTY_PARAM, 'freelancer_id');
+//        }
+//
+//        if (empty($project)) {
+//            return $this->response->error(Response::ERR_BAD_PARAM, 'project_id');
+//        }
 
-        if (empty($project)) {
-            return $this->response->error(Response::ERR_BAD_PARAM, 'project_id');
-        }
+//        $project_owner = \App\Models\Clients::findFirst([
+//            "conditions" => "cln_id = ?1",
+//            "bind"       => [1 => $project->cln_id]
+//        ]);
 
-        $project_owner = \App\Models\Clients::findFirst([
-            "conditions" => "cln_id = ?1",
-            "bind"       => [1 => $project->cln_id]
-        ]);
+//        if (empty($project_owner)) {
+//            return $this->response->error(Response::ERR_NOT_ALLOWED);
+//        }
 
-        if (empty($project_owner)) {
-            return $this->response->error(Response::ERR_NOT_ALLOWED);
-        }
-
-        if ($project_owner->acc_id !== $this->account_id) {
-            return $this->response->error(\App\Lib\Response::ERR_NOT_ALLOWED);
-        }
+//        if ($project_owner->acc_id !== $this->account_id) {
+//            return $this->response->error(\App\Lib\Response::ERR_NOT_ALLOWED);
+//        }
 
         $suggestion = \App\Models\ProjectsFreelancers::findFirst([
             "conditions" => "prj_id = ?1 and frl_id = ?2 and prf_is_hired = 0",
-            "bind" => [1 => $project_id, 2 => $freelancer_id]
+            "bind" => [1 => $post['project_id'], 2 => $post['freelancer_id']]
         ]);
 
         if (empty($suggestion)) {
-            return $this->response->error(Response::ERR_BAD_PARAM, 'freelancer_id');
+            return $this->response->error(Response::ERR_NOT_FOUND, 'suggestion');
         }
 
         $suggestion->prf_is_hired = 1;
@@ -163,6 +164,11 @@ class SuggestionsController extends ControllerBase
 
             return $this->response->error(Response::ERR_SERVICE);
         }
+
+        $project = \App\Models\Projects::findFirst([
+            "conditions" => "prj_id = ?1",
+            "bind"       => [1 => $post['project_id']]
+        ]);
 
         $project->prj_status = Projects::STATUS_ACTIVE;
 

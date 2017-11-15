@@ -15,24 +15,35 @@ class Projects extends ModelBase
     {
         $config = Di::getDefault()->getConfig();
 
-        $filters['limit'] = $filters['limit'] ? $filters['limit'] : $config->filters->limit;
-        $filters['offset'] = $filters['offset'] ? $filters['offset'] : $config->filters->offset;
+        $filters['limit'] ?: $filters['limit'] = $config->filters->limit;
+        $filters['offset'] ?: $filters['offset'] = $config->filters->offset;
 
-        $qb = Di::getDefault()->getQuerybuilder();
-        $query = $qb
+        $db = Di::getDefault()->getQuerybuilder();
+
+        $budget_sums = $db
+            ->table('steps')
+            ->select([
+                'prj_id',
+                $db->raw('SUM(steps.stp_budget) as prj_budget')
+            ])
+            ->groupBy('steps.prj_id');
+
+        $query = $db
             ->table('projects')
             ->select([
                 'projects.*',
                 'accounts.acc_id',
                 'accounts.acc_name',
                 'accounts.acc_surname',
-                $qb->raw('GROUP_CONCAT(DISTINCT concat(skills.skl_id, ":", skills.skl_title) SEPARATOR ",") as skills'),
-                $qb->raw('GROUP_CONCAT(`projects_skills`.skl_id) as skill_ids')
+                'budgets.prj_budget',
+                $db->raw('GROUP_CONCAT(DISTINCT skills.skl_id, ":", skills.skl_title) as skills'),
+                $db->raw('GROUP_CONCAT(\'|\', projects_skills.skl_id , \'|\') as skill_ids')
             ])
             ->join('clients', 'clients.cln_id', '=', 'projects.cln_id')
             ->join('accounts', 'clients.acc_id', '=', 'accounts.acc_id')
             ->leftJoin('projects_skills', 'projects_skills.prj_id', '=', 'projects.prj_id')
             ->leftJoin('skills', 'projects_skills.skl_id', '=', 'skills.skl_id')
+            ->leftJoin($db->subQuery($budget_sums, 'budgets'), 'projects.prj_id', '=', 'budgets.prj_id')
             ->orderBy('projects.prj_created_at', 'DESC')
             ->groupBy('projects.prj_id')
             ->limit($filters['limit'])
@@ -50,14 +61,6 @@ class Projects extends ModelBase
             $query->whereIn('projects.prj_id', $filters['ids']);
         }
 
-        if (!empty($filters['min_budget'])) {
-            $query->where('projects.prj_budget', '>=', $filters['min_budget']);
-        }
-
-        if (!empty($filters['max_budget'])) {
-            $query->where('projects.prj_budget', '<=', $filters['max_budget']);
-        }
-
         if (!empty($filters['subcategory_id'])) {
             $query->where('projects.sct_id', '=', $filters['subcategory_id']);
         }
@@ -68,8 +71,32 @@ class Projects extends ModelBase
                 ->orWhere('prj_description', 'like', '%' . $filters['content'] . '%');
         }
 
+        if (!empty($filters['deadline_from']) && intval($filters['deadline_from'])) {
+            $query
+                ->where('projects.prj_deadline', '>', date('Y-m-d H:i:s', strtotime('+ ' . intval($filters['deadline_from']) . ' days')));
+        }
+
+        if (!empty($filters['deadline_to']) && intval($filters['deadline_to'])) {
+            $query
+                ->where('projects.prj_deadline', '<', date('Y-m-d H:i:s', strtotime('+ ' . intval($filters['deadline_to']) . ' days')));
+        }
+
         if (!empty($filters['skills'])) {
-            $query->having('skill_ids', 'like', '%' . $filters['skills'] . '%');
+            $skills = "%";
+
+            foreach ($filters['skills'] as $skill) {
+                $skills .= '|' . $skill . '|' . '%';
+            }
+
+            $query->having('skill_ids', 'like', $skills);
+        }
+
+        if (!empty($filters['min_budget'])) {
+            $query->having('budgets.prj_budget', '>=', $filters['min_budget']);
+        }
+
+        if (!empty($filters['max_budget'])) {
+            $query->having('budgets.prj_budget', '<=', $filters['max_budget']);
         }
 
         $projects = $query->get();
@@ -77,6 +104,14 @@ class Projects extends ModelBase
         $projects = static::parseSkills($projects);
 
         return $projects;
+    }
+
+    protected static function getDeadline($days)
+    {
+        $deadline = new \DateTime();
+        $deadline->add(new \DateInterval('P' . $days . 'D'));
+
+        return $deadline->format('Y-m-d H:i:s');
     }
 
     protected static function parseSkills($projects)
@@ -102,31 +137,5 @@ class Projects extends ModelBase
         }
 
         return $projects;
-    }
-
-    public static function getMinBudget()
-    {
-        $qb = Di::getDefault()->getQuerybuilder();
-
-        $min_budget = $qb->table('projects')
-            ->select([$qb->raw('min(projects.prj_budget) as prj_budget')])
-            ->get();
-
-        $min_budget = (int) $min_budget[0]->prj_budget;
-
-        return $min_budget;
-    }
-
-    public static function getMaxBudget()
-    {
-        $qb = Di::getDefault()->getQuerybuilder();
-
-        $max_budget = $qb->table('projects')
-            ->select([$qb->raw('max(projects.prj_budget) as prj_budget')])
-            ->get();
-
-        $max_budget = (int) $max_budget[0]->prj_budget;
-
-        return $max_budget;
     }
 }

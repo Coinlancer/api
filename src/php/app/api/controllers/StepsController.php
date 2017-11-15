@@ -17,6 +17,8 @@ class StepsController extends ControllerBase
             "bind"       => [1 => $project_id]
         ]);
 
+
+
         return $this->response->json($steps);
     }
 
@@ -134,7 +136,7 @@ class StepsController extends ControllerBase
 
         $client_address = $client_account->acc_crypt_address;
 
-        $freelancer_account = \App\Models\Accounts::findFreelancerByProjectId($step->prj_id); // ??
+        $freelancer_account = \App\Models\Accounts::findFreelancerByProjectId($step->prj_id);
 
         if (!$freelancer_account && !$freelancer_account->acc_crypt_address) {
             $this->logger->error('Can not deposit step with id - ' . $step_id . ' . Can not find crypt_address of freelancer in DB');
@@ -147,7 +149,9 @@ class StepsController extends ControllerBase
             $smart_contract = new SmartContract();
             $tx_hash = $smart_contract->depositStep($step_id, $client_address, $freelancer_address, $step->stp_budget);
         } catch (\Exception $e) {
-            return $this->response->error(Response::ERR_SERVICE, $e->getMessage());
+            $this->logger->error('Deposit step failed', [$e->getMessage()]);
+
+            return $this->response->error(Response::ERR_SERVICE);
         }
 
         if ($tx_hash) {
@@ -199,7 +203,7 @@ class StepsController extends ControllerBase
         $step->stp_status = Steps::STATUS_MARK_AS_DONE;
 
         if (!$step->save()) {
-            $this->logger->error('Can not save step after deposit [step_id ' . $step_id . ']', $step->getMessages());
+            $this->logger->error('Can not save step after mark as done [step_id ' . $step_id . ']', $step->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
         }
@@ -235,7 +239,7 @@ class StepsController extends ControllerBase
             $smart_contract = new SmartContract();
             $result = $smart_contract->payStep($step_id);
         } catch (Exception $e) {
-            $this->logger->error('Can not pay step after deposit [step_id ' . $step_id . ']', $step->getMessages());
+            $this->logger->error('Can not pay step after mark as complete [step_id ' . $step_id . ']', $step->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
         }
@@ -245,7 +249,7 @@ class StepsController extends ControllerBase
         }
 
         if (!$step->save()) {
-            $this->logger->error('Can not save step after deposit [step_id ' . $step_id . ']', $step->getMessages());
+            $this->logger->error('Can not save step after mark as complete [step_id ' . $step_id . ']', $step->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
         }
@@ -255,7 +259,7 @@ class StepsController extends ControllerBase
             $project->prj_status = Projects::STATUS_COMPLETED;
 
             if (!$project->save()) {
-                $this->logger->error('Can not save project complete status after deposit [step_id ' . $step_id . ']', $project->getMessages());
+                $this->logger->error('Can not save project complete status [step_id ' . $step_id . ']', $project->getMessages());
             }
         }
 
@@ -294,7 +298,7 @@ class StepsController extends ControllerBase
             $smart_contract = new SmartContract();
             $result = $smart_contract->refundStep($step_id);
         } catch (Exception $e) {
-            $this->logger->error('Can not pay step after deposit [step_id ' . $step_id . ']', $step->getMessages());
+            $this->logger->error('Can not pay step after refund [step_id ' . $step_id . ']', $step->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
         }
@@ -304,19 +308,17 @@ class StepsController extends ControllerBase
         }
 
         if (!$step->save()) {
-            $this->logger->error('Can not save step after deposit [step_id ' . $step_id . ']', $step->getMessages());
+            $this->logger->error('Can not save step after refund [step_id ' . $step_id . ']', $step->getMessages());
 
             return $this->response->error(Response::ERR_SERVICE);
         }
 
-//        if (self::isAllStepsFinished($step->prj_id)) {
-            $project = \App\Models\Projects::findFirst($step->prj_id);
-            $project->prj_status = Projects::STATUS_CANCELED;
+        $project = \App\Models\Projects::findFirst($step->prj_id);
+        $project->prj_status = Projects::STATUS_CANCELED;
 
-            if (!$project->save()) {
-                $this->logger->error('Can not save project canceled status after deposit [step_id ' . $step_id . ']', $project->getMessages());
-            }
-//        }
+        if (!$project->save()) {
+            $this->logger->error('Can not save project canceled status after refund [step_id ' . $step_id . ']', $project->getMessages());
+        }
 
         return $this->response->json();
     }
